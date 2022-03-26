@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
-import { catchError, Observable, tap, throwError } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, Observable, tap, throwError } from 'rxjs';
 
 import { Product } from './product';
+import { ProductCategoryService } from '../product-categories/product-category.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,14 +12,41 @@ import { Product } from './product';
 export class ProductService {
   private productsUrl = 'api/products';
   private suppliersUrl = 'api/suppliers';
-  
+
   products$ = this.http.get<Product[]>(this.productsUrl)
-  .pipe(
-    tap(data => console.log('Products: ', JSON.stringify(data))),
-    catchError(this.handleError)
+    .pipe(
+      tap(data => console.log('Products: ', JSON.stringify(data))),
+      catchError(this.handleError)
+    );
+
+  productsWithCategory$ = combineLatest([this.products$, this.productCategoryService.productCategories$])
+    .pipe(
+      map(([products, categories]) => products.map(product => ({
+        ...product,
+        price: product.price ? product.price * 1.5 : 0,
+        categoryDescr: categories.find(c => product.categoryId === c.id)?.name,
+        searchKey: [product.productName]
+      } as Product))),
+    );
+
+  private productSelectedSubject = new BehaviorSubject<number>(0);
+  productSelectedAction$ = this.productSelectedSubject.asObservable();
+
+  selectedProduct$ = combineLatest([
+    this.productsWithCategory$,
+    this.productSelectedAction$
+  ]).pipe(
+    map(([products, selectedProductId]) =>
+      products.find(product => product.id === selectedProductId)),
+    tap(product => console.log('selectedProduct', product))
   );
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient,
+    private productCategoryService: ProductCategoryService) { }
+
+  selectedProductChanged(selectedProductId: number) {
+    this.productSelectedSubject.next(selectedProductId);
+  }
 
   private fakeProduct(): Product {
     return {
