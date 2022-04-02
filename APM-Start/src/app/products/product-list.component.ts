@@ -14,27 +14,29 @@ import { ProductService } from './product.service';
 })
 export class ProductListComponent {
   pageTitle = 'Product List';
-  errorMessage = '';
+  private errorMessageSubject = new Subject<string>();
+  errorMessage$ = this.errorMessageSubject.asObservable();
+
   categories: ProductCategory[] = [];
 
   private categorySelectedSubject = new BehaviorSubject<number>(0);
   categorySelectedAction$ = this.categorySelectedSubject.asObservable();
 
   products$ = combineLatest([
-    this.productService.productsWithCategory$,
+    this.productService.productsWithAdd$,
     this.categorySelectedAction$
   ]).pipe(
     map(([products, selectedCategoryId]) =>
       products.filter(product =>
         selectedCategoryId ? product.categoryId === selectedCategoryId : true)),
     catchError(err => {
-      this.errorMessage = err;
+      this.errorMessageSubject.next(err);
       return EMPTY;
     })
   );
 
   categories$ = this.productCategoryService.productCategories$.pipe(catchError(err => {
-    this.errorMessage = err;
+    this.errorMessageSubject.next(err);
     return EMPTY;
   }));
 
@@ -45,7 +47,7 @@ export class ProductListComponent {
   ) { }
 
   onAdd(): void {
-    console.log('Not yet implemented');
+    this.productService.addProduct();
   }
 
   onSelected(categoryId: string): void {
