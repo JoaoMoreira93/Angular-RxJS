@@ -5,6 +5,7 @@ import { BehaviorSubject, catchError, combineLatest, map, merge, Observable, sca
 
 import { Product } from './product';
 import { ProductCategoryService } from '../product-categories/product-category.service';
+import { SupplierService } from '../suppliers/supplier.service';
 
 @Injectable({
   providedIn: 'root'
@@ -39,7 +40,7 @@ export class ProductService {
   ]).pipe(
     map(([products, selectedProductId]) =>
       products.find(product => product.id === selectedProductId)),
-    tap(product => console.log('selectedProduct', product))
+      tap(product => console.log('selectedProduct', product))
   );
 
   private productInsertedSubject = new Subject<Product>();
@@ -54,13 +55,14 @@ export class ProductService {
   )
 
   constructor(private http: HttpClient,
-    private productCategoryService: ProductCategoryService) { }
+    private productCategoryService: ProductCategoryService,
+    private supplier: SupplierService) { }
 
   selectedProductChanged(selectedProductId: number) {
     this.productSelectedSubject.next(selectedProductId);
   }
 
-  addProduct(newProduct?: Product){
+  addProduct(newProduct?: Product) {
     newProduct = newProduct || this.fakeProduct();
     this.productInsertedSubject.next(newProduct);
   }
